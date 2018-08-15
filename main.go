@@ -52,13 +52,8 @@ func RequestIdMiddleware() gin.HandlerFunc {
 }
 func main() {
 	//mapName := os.Getenv("MAP_NAME")
-	// Creates a router without any middleware by default
 	r := gin.Default()
 	//TODO (GIN_MODE=release)
-	// Global middleware
-	// Logger middleware will write the logs to gin.DefaultWriter even if you set with GIN_MODE=release.
-	// By default
-	// gin.DefaultWriter = os.Stdout
 	r.Use(gin.Logger())
 	r.Use(RequestIdMiddleware())
 	r.Use(TokenAuthMiddleware())
@@ -67,17 +62,14 @@ func main() {
 	r.Use(gin.Recovery())
 
 	authorized := r.Group("/")
-
 	authorized.Use(TokenAuthMiddleware())
 	{
 		authorized.GET("/reverse", reverse)
 		authorized.POST("/search", search)
-
 		// nested group
 		//testing := authorized.Group("testing")
 		//testing.GET("/analytics", analyticsEndpoint)
 	}
-
 	r.Run(":3001")
 }
 
@@ -127,7 +119,6 @@ type Message struct {
 const (
 	MapIrUrl = "https://map.ir/"
 	MapIrApiKey = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6Ijk1MjhjNjgwMGM5M2I1NmY2NmQ2YjI5ZWVlZjRmZmY3NjZhYjUxODIwNDJhMDE1YTUxOGIyMzZjNzFjNDQ4ZWMzYzRjZTlmNDM3MjFiYjAzIn0.eyJhdWQiOiJteWF3ZXNvbWVhcHAiLCJqdGkiOiI5NTI4YzY4MDBjOTNiNTZmNjZkNmIyOWVlZWY0ZmZmNzY2YWI1MTgyMDQyYTAxNWE1MThiMjM2YzcxYzQ0OGVjM2M0Y2U5ZjQzNzIxYmIwMyIsImlhdCI6MTUzMjM0NDY3OSwibmJmIjoxNTMyMzQ0Njc5LCJleHAiOjE1MzIzNDgyNzksInN1YiI6IiIsInNjb3BlcyI6W119.sUsXA3IQzgU-L-MQPk0XTCSQtbrUtVHWxBQ_ZNTn8VJ6kFcy-X5KogziNk_XNAbLc5E3L80XnQfHQ-54mcgCSOsZ4e7zPpBPbWWMpcQbOgJLJoG8jDGn46L-85aLo1DJNXphGboXILCy9p6AnLpwTkM2u1gBCb6f2FjB7JF1N9wmkU2NHm3ypG7Vg37J3PyCweLBI2l4vCxwVuSZTkHKhyOFXyTW0_Tn5mugRAHaV4ExJ1yMeMbcsfy6M73DOox3YWgSVuzh5hw4bgi37l5AB4eQR0nc71Aqx5NhZFoPs8FRxjM2pP1y52hIlZNIT1m2fBLNzVqv-kjF9gf6aGxo5A"
-
 )
 
 func reverse(c *gin.Context) {
@@ -138,13 +129,14 @@ func reverse(c *gin.Context) {
 	url := MapIrUrl + fmt.Sprintf("reverse?lat=%v&lon=%v", latitude, longitude)
 
 	req, _ := http.NewRequest("GET", url, nil)
-
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-api-key", MapIrApiKey)
-
 	res, _ := http.DefaultClient.Do(req)
-
 	defer res.Body.Close()
+
+	if res.StatusCode >= 500 {
+		// run down time job
+	}
 
 	reverseResponse := new(ReverseResponse)
 	json.NewDecoder(res.Body).Decode(&reverseResponse)
@@ -152,7 +144,6 @@ func reverse(c *gin.Context) {
 
 	// TODO (change policy)
 	result := string(reverseResponse.Address)
-
 
 	r := Message{}
 	r.body = []byte(result)
@@ -171,14 +162,16 @@ func search(c *gin.Context) {
 	url := MapIrUrl + "search"
 	out, _ := json.Marshal(sR)
 	payload := strings.NewReader(string(out))
-
 	req, _ := http.NewRequest("POST", url, payload)
-
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-api-key", MapIrApiKey)
 	req.Header.Add("Content-Type", "application/json")
 
 	res, _ := http.DefaultClient.Do(req)
+
+	if res.StatusCode >= 500 {
+		// run down time job
+	}
 
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
