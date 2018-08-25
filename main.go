@@ -175,11 +175,10 @@ func reverse(c *gin.Context) {
 
 		// city part
 		if city := reverseResponse.Result.City; city != "" {
-			if len(mainAddress) > 0 && mainAddress != "" {
-				mainAddress += ", "
-			}
 			mainAddress += city
 		}
+
+		// district part
 		if district := reverseResponse.Result.District; district != "" {
 			if len(mainAddress) > 0 && mainAddress != "" {
 				mainAddress += ", "
@@ -230,24 +229,16 @@ type BB struct {
 }
 
 type CedarSearchLocation struct {
-	BB BB `json:"bb"`
+	BB     BB     `json:"bb"`
 	Center string `json:"center"`
-}
-
-type CedarSearchDistrict struct {
-	Name string `json:"-"`
-}
-
-type CedarSearchLocality struct {
-	Name string `json:"-"`
 }
 
 type CedarSearchComponent struct {
 	Country string `json:"country"`
 	Province string `json:"province"`
 	City string `json:"city"`
-	Districts CedarSearchDistrict `json:"districts"`
-	Localities CedarSearchLocality `json:"localities"`
+	Districts []string `json:"districts"`
+	Localities []string `json:"localities"`
 }
 
 type CedarSearchResult struct {
@@ -263,6 +254,10 @@ type CedarSearchResult struct {
 type CedarMapSearchResponse struct {
 	Status string `json:"status"`
 	Results []CedarSearchResult `json:"results"`
+}
+
+type GeorgeSearchResponse struct {
+	Result []string `json:"result"`
 }
 
 func search(c *gin.Context) {
@@ -290,9 +285,47 @@ func search(c *gin.Context) {
 	cedarSearchResponse := new(CedarMapSearchResponse)
 	json.NewDecoder(res.Body).Decode(&cedarSearchResponse)
 
+
+	georgeSearchResponse := GeorgeSearchResponse{}
+	resultString := make([]string, 0)
+	for _, value := range cedarSearchResponse.Results {
+		volunteerValue := ""
+		// city part
+		if city := value.Components.City; city != "" {
+			volunteerValue += city
+		}
+
+		// district part
+		if len(value.Components.Districts) > 0 {
+			if district := value.Components.Districts[0]; district != "" {
+				if len(volunteerValue) > 0 && volunteerValue != "" {
+					volunteerValue += ", "
+				}
+				volunteerValue += district
+			}
+		}
+
+		//locality part
+		if len(value.Components.Localities) > 0 {
+			if localityName := value.Components.Localities[0]; localityName != "" {
+				if len(volunteerValue) > 0 && volunteerValue != "" {
+					volunteerValue += ", "
+				}
+				volunteerValue += localityName
+			}
+		}
+
+		// address part
+		if address := value.Address; address != "" {
+			if len(volunteerValue) > 0 && volunteerValue != "" {
+				volunteerValue += ", "
+			}
+			volunteerValue += address
+		}
+
+		resultString = append(resultString, volunteerValue)
+	}
+	georgeSearchResponse.Result = resultString
 	c.Header("Content-Type", "application/json; charset=utf-8")
-	c.JSON(200, gin.H{
-		"status":  res.StatusCode,
-		"result": cedarSearchResponse,
-	})
+	c.JSON(res.StatusCode, georgeSearchResponse)
 }
