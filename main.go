@@ -1,13 +1,9 @@
 package main
 
 import (
-		"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"net/http"
-	"io/ioutil"
-	"log"
 	"fmt"
-	"github.com/gin-gonic/gin/binding"
-	"strings"
 	"encoding/json"
 	"github.com/satori/go.uuid"
 	"os"
@@ -65,7 +61,7 @@ func main() {
 	authorized.Use(TokenAuthMiddleware())
 	{
 		authorized.GET("/reverse", reverse)
-		authorized.POST("/search", search)
+		authorized.GET("/search", search)
 		// nested group
 		//testing := authorized.Group("testing")
 		//testing.GET("/analytics", analyticsEndpoint)
@@ -126,7 +122,7 @@ type Result struct {
 
 type CedarMapReverseResponse struct {
 	Status string `json:"status"`
-	Result Result `json:"-"`
+	Result Result `json:"result"`
 }
 
 type Location struct {
@@ -156,7 +152,8 @@ func reverse(c *gin.Context) {
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
 
-	url := MapIrUrl + fmt.Sprintf("reverse?lat=%v&lon=%v", latitude, longitude)
+	url := CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
+		latitude, longitude, CedarMapAccessToken)
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("accept", "application/json")
@@ -165,15 +162,57 @@ func reverse(c *gin.Context) {
 	defer res.Body.Close()
 
 	if res.StatusCode >= 500 {
+		//
 		// run down time job
 	}
 
-	reverseResponse := new(ReverseResponse)
+	reverseResponse := new(CedarMapReverseResponse)
 	json.NewDecoder(res.Body).Decode(&reverseResponse)
 	c.Header("Content-Type", "application/json; charset=utf-8")
 
-	// TODO (change policy)
-	result := string(reverseResponse.Address)
+	var mainAddress string
+	if district := reverseResponse.Result.District; district != "" {
+
+		// city part
+		if city := reverseResponse.Result.City; city != "" {
+			if len(mainAddress) > 0 && mainAddress != "" {
+				mainAddress += ", "
+			}
+			mainAddress += city
+		}
+		if district := reverseResponse.Result.District; district != "" {
+			if len(mainAddress) > 0 && mainAddress != "" {
+				mainAddress += ", "
+			}
+			mainAddress += district
+		}
+
+		// place part
+		if place := reverseResponse.Result.Place; place != "" {
+			if len(mainAddress) > 0 && mainAddress != "" {
+				mainAddress += ", "
+			}
+			mainAddress += place
+		}
+
+		// locality part
+		if localityName := reverseResponse.Result.Locality; localityName != "" {
+			if len(mainAddress) > 0 && mainAddress != "" {
+				mainAddress += ", "
+			}
+			mainAddress += localityName
+		}
+
+		// address part
+		if address := reverseResponse.Result.Address; address != "" {
+			if len(mainAddress) > 0 && mainAddress != "" {
+				mainAddress += ", "
+			}
+			mainAddress += address
+		}
+	}
+
+	result := mainAddress
 
 	r := Message{}
 	r.body = []byte(result)
@@ -181,31 +220,79 @@ func reverse(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"status":  r.status,
-		"message": string(r.body),
+		"result": string(r.body),
 	})
 }
 
+type BB struct {
+	NE string `json:"ne"`
+	SW string `json:"sw"`
+}
+
+type CedarSearchLocation struct {
+	BB BB `json:"bb"`
+	Center string `json:"center"`
+}
+
+type CedarSearchDistrict struct {
+	Name string `json:"-"`
+}
+
+type CedarSearchLocality struct {
+	Name string `json:"-"`
+}
+
+type CedarSearchComponent struct {
+	Country string `json:"country"`
+	Province string `json:"province"`
+	City string `json:"city"`
+	Districts CedarSearchDistrict `json:"districts"`
+	Localities CedarSearchLocality `json:"localities"`
+}
+
+type CedarSearchResult struct {
+	Id int `json:"id"`
+	Name string `json:"name"`
+	NameEn string `json:"name_en"`
+	Type string `json:"type"`
+	Location CedarSearchLocation `json:"location"`
+	Address string `json:"address"`
+	Components CedarSearchComponent `json:"components"`
+}
+
+type CedarMapSearchResponse struct {
+	Status string `json:"status"`
+	Results []CedarSearchResult `json:"results"`
+}
+
 func search(c *gin.Context) {
-	var sR SearchRequest
-	c.ShouldBindWith(&sR, binding.JSON)
-	log.Println()
-	url := MapIrUrl + "search"
-	out, _ := json.Marshal(sR)
-	payload := strings.NewReader(string(out))
-	req, _ := http.NewRequest("POST", url, payload)
+	name := c.Query("name")
+	latitude := c.Query("lat")
+	longitude := c.Query("lon")
+	distance := c.Query("distance")
+
+	url := CedarMapUrl + fmt.
+		Sprintf("v1/geocode/cedarmaps.streets/%v.json?access_token=%v&location=%v,%v&distance=%v",
+		name, CedarMapAccessToken, latitude, longitude, distance)
+
+
+	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("x-api-key", MapIrApiKey)
-	req.Header.Add("Content-Type", "application/json")
 
 	res, _ := http.DefaultClient.Do(req)
+	defer res.Body.Close()
 
 	if res.StatusCode >= 500 {
+		//
 		// run down time job
 	}
 
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	cedarSearchResponse := new(CedarMapSearchResponse)
+	json.NewDecoder(res.Body).Decode(&cedarSearchResponse)
 
 	c.Header("Content-Type", "application/json; charset=utf-8")
-	c.String(200, string(body))
+	c.JSON(200, gin.H{
+		"status":  res.StatusCode,
+		"result": cedarSearchResponse,
+	})
 }
