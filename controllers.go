@@ -20,11 +20,9 @@ func reverse(c *gin.Context) {
 
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
-	RedisSetup()
-	if res.StatusCode >= 500 {
 
-		// run down time job
-	}
+	//if res.StatusCode >= 500 {
+	//}
 
 	reverseResponse := new(CedarMapReverseResponse)
 	json.NewDecoder(res.Body).Decode(&reverseResponse)
@@ -78,7 +76,6 @@ func reverse(c *gin.Context) {
 	r.status = res.StatusCode
 
 	c.JSON(200, gin.H{
-		"status": r.status,
 		"result": string(r.body),
 	})
 }
@@ -110,41 +107,43 @@ func search(c *gin.Context) {
 	georgeSearchResponse := GeorgeSearchResponse{}
 	resultString := make([]string, 0)
 	for _, value := range cedarSearchResponse.Results {
-		volunteerValue := ""
-		// city part
-		if city := value.Components.City; city != "" {
-			volunteerValue += city
-		}
-
-		// district part
-		if len(value.Components.Districts) > 0 {
-			if district := value.Components.Districts[0]; district != "" {
-				if len(volunteerValue) > 0 && volunteerValue != "" {
-					volunteerValue += ", "
-				}
-				volunteerValue += district
+		if value.Address != "" {
+			volunteerValue := ""
+			// city part
+			if city := value.Components.City; city != "" {
+				volunteerValue += city
 			}
-		}
 
-		//locality part
-		if len(value.Components.Localities) > 0 {
-			if localityName := value.Components.Localities[0]; localityName != "" {
-				if len(volunteerValue) > 0 && volunteerValue != "" {
-					volunteerValue += ", "
+			// district part
+			if len(value.Components.Districts) > 0 {
+				if district := value.Components.Districts[0]; district != "" {
+					if len(volunteerValue) > 0 && volunteerValue != "" {
+						volunteerValue += ", "
+					}
+					volunteerValue += district
 				}
-				volunteerValue += localityName
 			}
-		}
 
-		// address part
-		if address := value.Address; address != "" {
+			//locality part
+			//if len(value.Components.Localities) > 0 {
+			//	if localityName := value.Components.Localities[0]; localityName != "" {
+			//		if len(volunteerValue) > 0 && volunteerValue != "" {
+			//			volunteerValue += ", "
+			//		}
+			//		volunteerValue += localityName
+			//	}
+			//}
+
+			// address part
 			if len(volunteerValue) > 0 && volunteerValue != "" {
 				volunteerValue += ", "
 			}
-			volunteerValue += address
-		}
+			volunteerValue += value.Address
 
-		resultString = append(resultString, volunteerValue)
+			resultString = append(resultString, volunteerValue)
+		} else {
+			continue
+		}
 	}
 	georgeSearchResponse.Result = resultString
 	c.Header("Content-Type", "application/json; charset=utf-8")

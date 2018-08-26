@@ -1,6 +1,6 @@
 package main
 
-
+import "time"
 
 type ReverseRequest struct {
 	Lat string `json:"lat"`
@@ -108,4 +108,10 @@ type CedarMapSearchResponse struct {
 
 type GeorgeSearchResponse struct {
 	Result []string `json:"result"`
+}
+
+type ErrorObject struct {
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	Url string
+	Status string
 }

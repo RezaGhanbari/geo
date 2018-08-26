@@ -3,8 +3,11 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"os"
-
 	"github.com/garyburd/redigo/redis"
+	"github.com/gin-contrib/cache/persistence"
+	"github.com/gin-contrib/cache"
+
+	"time"
 )
 
 var (
@@ -19,6 +22,13 @@ const (
 )
 
 func main() {
+	//store := persistence.NewInMemoryStore(time.Second)
+	redisUrl := os.Getenv("REDIS_URL")
+	password := os.Getenv("REDIS_PASSWORD")
+
+	store := persistence.NewRedisCache(redisUrl, password, time.Minute)
+
+	serverUrl := os.Getenv("SERVER")
 	port := os.Getenv("PORT")
 	//mapName := os.Getenv("MAP_NAME")
 	r := gin.Default()
@@ -33,8 +43,9 @@ func main() {
 	authorized := r.Group("/")
 	authorized.Use(TokenAuthMiddleware())
 	{
-		authorized.GET("/reverse", reverse)
-		authorized.GET("/search", search)
+		//authorized.GET("/reverse", reverse)
+		authorized.GET("/search", cache.CachePage(store, time.Minute, search))
+		authorized.GET("/reverse", cache.CachePage(store, time.Minute, reverse))
 	}
-	r.Run(port)
+	r.Run(serverUrl + port)
 }

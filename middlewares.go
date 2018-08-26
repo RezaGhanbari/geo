@@ -11,6 +11,7 @@ func respondWithError(code int, message string, c *gin.Context) {
 	c.JSON(code, resp)
 	c.Abort()
 }
+
 func TokenAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// read from header

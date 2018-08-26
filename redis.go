@@ -41,14 +41,12 @@ func newRedisPool(server, password string) *redis.Pool {
 }
 
 
-func RedisSetup() {
+func RedisPing() {
 	serverUrl := os.Getenv("REDIS_URL")
 	password := os.Getenv("REDIS_PASSWORD")
 	RedisPool = newRedisPool(serverUrl, password)
 	c := RedisPool.Get()
 	defer c.Close()
-
-
 	pong, err := redis.String(c.Do("PING"))
 	PanicOnError(err, "Cannot ping Redis")
 	log.Infof("Redis Ping: %s", pong)
@@ -76,6 +74,20 @@ func RedisSet(key string, value string) string {
 	defer c.Close()
 
 	ret, err := redis.String(c.Do("SET", key, value))
+	if err != nil {
+		panic(err)
+	}
+	return ret
+}
+
+func RedisSetObject(obj string, fileds ... ErrorObject) string {
+	serverUrl := os.Getenv("REDIS_URL")
+	password := os.Getenv("REDIS_PASSWORD")
+	RedisPool = newRedisPool(serverUrl, password)
+	c := RedisPool.Get()
+	defer c.Close()
+
+	ret, err := redis.String(c.Do("HMSET", obj, ))
 	if err != nil {
 		panic(err)
 	}
