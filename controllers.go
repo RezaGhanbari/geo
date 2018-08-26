@@ -10,16 +10,6 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func ping(c *gin.Context) {
-	url := CedarMapUrl + "reverse?lat=35.703126400067916&lon=51.386243775486946"
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("accept", "application/json")
-
-	res, _ := http.DefaultClient.Do(req)
-	defer res.Body.Close()
-
-}
-
 func reverse(c *gin.Context) {
 	//var reverseRequest ReverseRequest
 	latitude := c.Query("lat")
