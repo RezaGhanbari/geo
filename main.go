@@ -46,6 +46,7 @@ func main() {
 		//authorized.GET("/reverse", reverse)
 		authorized.GET("/search", cache.CachePage(store, time.Minute, search))
 		authorized.GET("/reverse", cache.CachePage(store, time.Minute, reverse))
+		authorized.GET("/ping", ping)
 	}
 	r.Run(serverUrl + port)
 }

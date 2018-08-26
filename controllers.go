@@ -7,15 +7,25 @@ import (
 	"encoding/json"
 	"geo/Redis"
 	"time"
-	"encoding/binary"
-	"bytes"
 	"github.com/satori/go.uuid"
 )
+
+func ping(c *gin.Context) {
+	url := CedarMapUrl + "reverse?lat=35.703126400067916&lon=51.386243775486946"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("accept", "application/json")
+
+	res, _ := http.DefaultClient.Do(req)
+	defer res.Body.Close()
+
+}
 
 func reverse(c *gin.Context) {
 	//var reverseRequest ReverseRequest
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
+	clientId := c.Request.Header.Get("clientId")
+	gcmToken := c.Request.Header.Get("gcmToken")
 
 	url := CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
 		latitude, longitude, CedarMapAccessToken)
@@ -25,14 +35,20 @@ func reverse(c *gin.Context) {
 
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
+	//res.StatusCode = 500
+	if res.StatusCode >= 500 {
 
-	if res.StatusCode >= 100 {
-		var bin_buf bytes.Buffer
-		errorObject := ErrorObject{Status:res.StatusCode, Timestamp:time.Now(), Url:c.Request.URL.Path}
-		binary.Write(&bin_buf, binary.BigEndian, errorObject)
+		errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
+		res.Status, clientId, gcmToken}
+
+		b, _ := json.Marshal(errorObject)
+
 		u, _ := uuid.NewV4()
-		Redis.Set(u.String(), bin_buf.Bytes())
 
+		err := Redis.Set(u.String(), b)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	reverseResponse := new(CedarMapReverseResponse)

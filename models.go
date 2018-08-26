@@ -1,10 +1,5 @@
 package main
 
-import (
-	"time"
-	"github.com/garyburd/redigo/redis"
-)
-
 type ReverseRequest struct {
 	Lat string `json:"lat"`
 	Lon string `json:"lon"`
@@ -113,13 +108,10 @@ type GeorgeSearchResponse struct {
 	Result []string `json:"result"`
 }
 
-type ErrorObject struct {
-	Timestamp time.Time `json:"timestamp,omitempty"`
-	Url string
-	Status int
-}
-
-type RedisStore struct {
-	pool              *redis.Pool
-	defaultExpiration time.Duration
+type ErrorLogger struct {
+	Timestamp string `json:"timestamp"`
+	Url string `json:"url"`
+	Status string `json:"status"`
+	ClientId string `json:"client_id"`
+	GcmToken string `json:"gcm_token"`
 }
