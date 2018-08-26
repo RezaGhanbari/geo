@@ -5,6 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"encoding/json"
+	"geo/Redis"
+	"time"
+	"encoding/binary"
+	"bytes"
+	"github.com/satori/go.uuid"
 )
 
 func reverse(c *gin.Context) {
@@ -21,7 +26,12 @@ func reverse(c *gin.Context) {
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
 
-	if res.StatusCode >= 500 {
+	if res.StatusCode >= 100 {
+		var bin_buf bytes.Buffer
+		errorObject := ErrorObject{Status:res.StatusCode, Timestamp:time.Now(), Url:c.Request.URL.Path}
+		binary.Write(&bin_buf, binary.BigEndian, errorObject)
+		u, _ := uuid.NewV4()
+		Redis.Set(u.String(), bin_buf.Bytes())
 
 	}
 

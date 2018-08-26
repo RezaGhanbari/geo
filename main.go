@@ -3,16 +3,17 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"os"
-	"github.com/garyburd/redigo/redis"
-	"github.com/gin-contrib/cache/persistence"
+	//"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cache"
 
 	"time"
+	"geo/Redis"
+	"github.com/gin-contrib/cache/persistence"
 )
 
-var (
-	RedisPool *redis.Pool
-)
+//var (
+//	RedisPool *redis.Pool
+//)
 
 const (
 	MapIrUrl            = "https://map.ir/"
@@ -22,17 +23,16 @@ const (
 )
 
 func main() {
-	//store := persistence.NewInMemoryStore(time.Second)
-	redisUrl := os.Getenv("REDIS_URL")
-	password := os.Getenv("REDIS_PASSWORD")
 
-	store := persistence.NewRedisCache(redisUrl, password, time.Minute)
+	redisPool := Redis.Init()
+	store := persistence.NewRedisCacheWithPool(redisPool, time.Minute)
 
 	serverUrl := os.Getenv("SERVER")
 	port := os.Getenv("PORT")
-	//mapName := os.Getenv("MAP_NAME")
+
 	r := gin.Default()
 	//TODO (GIN_MODE=release)
+	gin.SetMode(gin.DebugMode)
 	r.Use(gin.Logger())
 	r.Use(RequestIdMiddleware())
 	r.Use(TokenAuthMiddleware())

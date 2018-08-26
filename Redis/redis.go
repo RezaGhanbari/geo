@@ -1,7 +1,7 @@
-package main
+package Redis
 
 import (
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"os"
 	"time"
 	"os/signal"
@@ -13,13 +13,14 @@ var (
 	Pool *redis.Pool
 )
 
-func init() {
+func Init() *redis.Pool {
 	redisHost := os.Getenv("REDIS_HOST")
 	if redisHost == "" {
 		redisHost = ":6379"
 	}
 	Pool = newPool(redisHost)
 	cleanupHook()
+	return Pool
 }
 
 func newPool(server string) *redis.Pool {

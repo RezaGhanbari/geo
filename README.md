@@ -6,3 +6,4 @@
 - REDIS_PASSWORD
 - SERVER
 - PORT
+- GIN_MODE=release
