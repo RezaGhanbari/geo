@@ -1,38 +1,39 @@
 package main
 
 import (
-	"fmt"
-	"time"
-	"os"
 	"github.com/garyburd/redigo/redis"
-	log "github.com/Sirupsen/logrus"
-
+	"os"
+	"time"
+	"os/signal"
+	"syscall"
+	"fmt"
 )
 
-func PanicOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%v: $v", msg, err)
-		panic(fmt.Sprintf("%v: %v", msg, err))
+var (
+	Pool *redis.Pool
+)
+
+func init() {
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = ":6379"
 	}
+	Pool = newPool(redisHost)
+	cleanupHook()
 }
 
-func newRedisPool(server, password string) *redis.Pool {
+func newPool(server string) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     3,
+		MaxIdle: 3,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
 			if err != nil {
 				return nil, err
 			}
-			if password != "" {
-				if _, err := c.Do("AUTH", password); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
 			return c, err
 		},
+
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
 			_, err := c.Do("PING")
 			return err
@@ -40,56 +41,102 @@ func newRedisPool(server, password string) *redis.Pool {
 	}
 }
 
-
-func RedisPing() {
-	serverUrl := os.Getenv("REDIS_URL")
-	password := os.Getenv("REDIS_PASSWORD")
-	RedisPool = newRedisPool(serverUrl, password)
-	c := RedisPool.Get()
-	defer c.Close()
-	pong, err := redis.String(c.Do("PING"))
-	PanicOnError(err, "Cannot ping Redis")
-	log.Infof("Redis Ping: %s", pong)
+func cleanupHook() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGKILL)
+	go func() {
+		<- c
+		Pool.Close()
+		os.Exit(0)
+	}()
 }
 
-func RedisGet(str string) string{
-	serverUrl := os.Getenv("REDIS_URL")
-	password := os.Getenv("REDIS_PASSWORD")
-	RedisPool = newRedisPool(serverUrl, password)
-	c := RedisPool.Get()
-	defer c.Close()
+func Ping() error {
+	conn := Pool.Get()
+	defer conn.Close()
 
-	ret, err := redis.String(c.Do("GET", str))
+	_, err := redis.String(conn.Do("PING"))
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Cannot 'PING' db: %v", err)
 	}
-	return ret
+	return nil
 }
 
-func RedisSet(key string, value string) string {
-	serverUrl := os.Getenv("REDIS_URL")
-	password := os.Getenv("REDIS_PASSWORD")
-	RedisPool = newRedisPool(serverUrl, password)
-	c := RedisPool.Get()
-	defer c.Close()
+func Get(key string) ([]byte, error) {
+	conn := Pool.Get()
+	defer conn.Close()
 
-	ret, err := redis.String(c.Do("SET", key, value))
+	var data []byte
+	data, err := redis.Bytes(conn.Do("GET", key))
 	if err != nil {
-		panic(err)
+		return data, fmt.Errorf("Error getting key %s: %v", key, err)
 	}
-	return ret
+	return data, err
 }
 
-func RedisSetObject(obj string, fileds ... ErrorObject) string {
-	serverUrl := os.Getenv("REDIS_URL")
-	password := os.Getenv("REDIS_PASSWORD")
-	RedisPool = newRedisPool(serverUrl, password)
-	c := RedisPool.Get()
-	defer c.Close()
+func Set(key string, value []byte) error {
+	conn := Pool.Get()
+	defer conn.Close()
 
-	ret, err := redis.String(c.Do("HMSET", obj, ))
+	_, err := conn.Do("SET", key, value)
 	if err != nil {
-		panic(err)
+		v := string(value)
+		if len(v) > 15 {
+			v = v[0:12] + "..."
+		}
+		return fmt.Errorf("Error setting key %s to %s: %v", key, v, err)
 	}
-	return ret
+	return err
+}
+
+func Exists(key string) (bool, error) {
+	conn := Pool.Get()
+	defer conn.Close()
+
+	ok, err := redis.Bool(conn.Do("EXISTS", key))
+	if err != nil {
+		return ok, fmt.Errorf("Error checking if key %s exists: %v", key, err)
+	}
+	return ok, err
+}
+
+func Delete(key string) error {
+	conn := Pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("DEL", key)
+	return err
+}
+
+func GetKeys(pattern string) ([]string, error) {
+	conn := Pool.Get()
+	defer conn.Close()
+
+	iter := 0
+	keys := []string{}
+
+	for {
+		arr, err := redis.Values(conn.Do("SCAN", iter, "MATCH", pattern))
+		if err != nil {
+			return keys, fmt.Errorf("Error retrieving '%s' keys", pattern)
+		}
+
+		iter, _ = redis.Int(arr[0], nil)
+		k, _ := redis.Strings(arr[1], nil)
+		keys = append(keys, k...)
+		if iter == 0 {
+			break
+		}
+	}
+	return keys, nil
+}
+
+
+func Incr(counterKey string) (int, error) {
+	conn := Pool.Get()
+	defer conn.Close()
+
+	return redis.Int(conn.Do("INCR", counterKey))
 }

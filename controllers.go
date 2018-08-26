@@ -21,8 +21,9 @@ func reverse(c *gin.Context) {
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
 
-	//if res.StatusCode >= 500 {
-	//}
+	if res.StatusCode >= 500 {
+
+	}
 
 	reverseResponse := new(CedarMapReverseResponse)
 	json.NewDecoder(res.Body).Decode(&reverseResponse)
