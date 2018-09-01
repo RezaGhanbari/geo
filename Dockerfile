@@ -14,8 +14,7 @@ ENV API_TOKEN=WP5D&s3ftd^NU3TG@JH2n?!!@!MLmquD5t?V7vCPdANyY4Vrq5F \
     REDIS_URL=localhost:6379 \
     SERVER=localhost \
     PORT=3001 \
-    GIN_MODE=RELEASE \
     LIMIT=100
-
+EXPOSE $PORT
 RUN go build -o main .
 CMD ["/app/main"]

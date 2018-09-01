@@ -49,12 +49,12 @@ func main() {
 
 	r := gin.Default()
 
-	releaseMode := os.Getenv("GIN_MODE")
-	if releaseMode == "DEBUG" {
-		gin.SetMode(gin.ReleaseMode)
-	} else {
-		gin.SetMode(gin.DebugMode)
-	}
+	//releaseMode := os.Getenv("GIN_MODE")
+	//if releaseMode == "DEBUG" {
+	//gin.SetMode(gin.ReleaseMode)
+	//} else {
+	gin.SetMode(gin.DebugMode)
+	//}
 	r.Use(gin.Logger())
 	r.Use(TokenAuthMiddleware())
 
