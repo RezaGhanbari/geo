@@ -57,8 +57,8 @@ type Location struct {
 }
 
 type Message struct {
-	status int
-	body   []byte
+	Status int `json:"status"`
+	Body   []byte `json:"body"`
 }
 
 type BB struct {

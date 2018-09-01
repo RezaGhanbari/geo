@@ -23,6 +23,11 @@ func reverse(c *gin.Context) {
 	clientId := c.Request.Header.Get("clientId")
 	gcmToken := c.Request.Header.Get("gcmToken")
 
+	if clientId == "" || gcmToken == ""{
+		respondWithError(400, "Credentials are not provided.", c)
+		return
+	}
+
 	var url string
 	if mapName == "CEDAR" {
 		url = CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
@@ -101,20 +106,20 @@ func reverse(c *gin.Context) {
 		}
 		result := mainAddress
 		r := Message{}
-		r.body = []byte(result)
-		r.status = res.StatusCode
-		c.JSON(r.status, gin.H{
-			"result": string(r.body),
+		r.Body = []byte(result)
+		r.Status = res.StatusCode
+		c.JSON(r.Status, gin.H{
+			"result": string(r.Body),
 		})
 	} else if mapName == "MAPIR" {
 		reverseResponse := new(MapIrReverseResponse)
 		json.NewDecoder(res.Body).Decode(&reverseResponse)
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		r := Message{}
-		r.body = []byte(reverseResponse.AddressCompact)
-		r.status = res.StatusCode
-		c.JSON(r.status, gin.H{
-			"result": string(r.body),
+		r.Body = []byte(reverseResponse.AddressCompact)
+		r.Status = res.StatusCode
+		c.JSON(r.Status, gin.H{
+			"result": string(r.Body),
 		})
 	}
 }
@@ -129,6 +134,11 @@ func search(c *gin.Context) {
 	distance := c.Query("distance")
 	clientId := c.Request.Header.Get("clientId")
 	gcmToken := c.Request.Header.Get("gcmToken")
+
+	if clientId == "" || gcmToken == ""{
+		respondWithError(400, "Credentials are not provided.", c)
+		return
+	}
 
 	if mapName == "CEDAR" {
 		url := CedarMapUrl + fmt.
@@ -189,11 +199,11 @@ func search(c *gin.Context) {
 		c.JSON(res.StatusCode, georgeSearchResponse)
 	} else if mapName == "MAPIR" {
 		r := Message{}
-		r.body = []byte("Not implemented")
-		r.status = 501
+		r.Body = []byte("Not implemented")
+		r.Status = 501
 
-		c.JSON(r.status, gin.H{
-			"result": string(r.body),
+		c.JSON(r.Status, gin.H{
+			"result": string(r.Body),
 		})
 	}
 }

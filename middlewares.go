@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"os"
 	"github.com/satori/go.uuid"
+	"os"
 )
 
 func respondWithError(code int, message string, c *gin.Context) {
