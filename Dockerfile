@@ -12,9 +12,9 @@ RUN go get github.com/satori/go.uuid
 ENV API_TOKEN=WP5D&s3ftd^NU3TG@JH2n?!!@!MLmquD5t?V7vCPdANyY4Vrq5F \
     MAP_NAME=CEDAR \
     REDIS_URL=localhost:6379 \
-    SERVER=localhost \
+#    SERVER=localhost \
     PORT=3001 \
     LIMIT=100
-EXPOSE $PORT
+EXPOSE 3001:3001
 RUN go build -o main .
 CMD ["/app/main"]
