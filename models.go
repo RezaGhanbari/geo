@@ -1,31 +1,26 @@
 package main
 
-type ReverseRequest struct {
-	Lat string `json:"lat"`
-	Lon string `json:"lon"`
-}
-
 type Geom struct {
-	Type        string    `json:"type"`
+	Type        string   `json:"type"`
 	Coordinates []string `json:"coordinates"`
 }
 
 type MapIrReverseResponse struct {
-	Address       string `json:"address"`
-	PostalAddress string `json:"postal_address"`
+	Address        string `json:"address"`
+	PostalAddress  string `json:"postal_address"`
 	AddressCompact string `json:"address_compact"`
-	Country       string `json:"country"`
-	Province      string `json:"province"`
-	County        string `json:"county"`
-	City          string `json:"city"`
-	District      string `json:"district"`
-	Region        string `json:"region"`
-	Primary       string `json:"primary"`
-	Last          string `json:"last"`
-	Poi           string `json:"poi"`
-	Plaque        string `json:"plaque"`
-	PostalCode    string `json:"postal_code"`
-	Geom          Geom   `json:"-"`
+	Country        string `json:"country"`
+	Province       string `json:"province"`
+	County         string `json:"county"`
+	City           string `json:"city"`
+	District       string `json:"district"`
+	Region         string `json:"region"`
+	Primary        string `json:"primary"`
+	Last           string `json:"last"`
+	Poi            string `json:"poi"`
+	Plaque         string `json:"plaque"`
+	PostalCode     string `json:"postal_code"`
+	Geom           Geom   `json:"-"`
 }
 
 type Component struct {
@@ -59,11 +54,6 @@ type CedarMapReverseResponse struct {
 type Location struct {
 	Type        string    `json:"type"`
 	Coordinates []float64 `json:"coordinates"`
-}
-
-type SearchRequest struct {
-	Text     string   `json:"text"`
-	Location Location `json:"location"`
 }
 
 type Message struct {
@@ -110,19 +100,14 @@ type MapIrCoordinate struct {
 }
 
 type MapIrValue struct {
-	Text string `json:"text"`
-	Title string `json:"title"`
-	Address string `json:"address"`
-	Province string `json:"province"`
-	City string `json:"city"`
-	Type string `json:"type"`
-	FClass string `json:"FClass"`
+	Text       string          `json:"text"`
+	Title      string          `json:"title"`
+	Address    string          `json:"address"`
+	Province   string          `json:"province"`
+	City       string          `json:"city"`
+	Type       string          `json:"type"`
+	FClass     string          `json:"FClass"`
 	Coordinate MapIrCoordinate `json:"-"`
-}
-
-type MapIrSearchResponse struct {
-	OdataCount int `json:"odata.count"`
-	Value []MapIrValue `json:"value"`
 }
 
 type GeorgeSearchResponse struct {
@@ -131,8 +116,8 @@ type GeorgeSearchResponse struct {
 
 type ErrorLogger struct {
 	Timestamp string `json:"timestamp"`
-	Url string `json:"url"`
-	Status string `json:"status"`
-	ClientId string `json:"client_id"`
-	GcmToken string `json:"gcm_token"`
+	Url       string `json:"url"`
+	Status    string `json:"status"`
+	ClientId  string `json:"client_id"`
+	GcmToken  string `json:"gcm_token"`
 }
