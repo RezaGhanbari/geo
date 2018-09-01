@@ -14,34 +14,35 @@ import (
 var mapName = os.Getenv("MAP_NAME")
 
 func reverse(c *gin.Context) {
+	if mapName == "" {
+		mapName = "CEDAR"
+	}
 
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
 	clientId := c.Request.Header.Get("clientId")
 	gcmToken := c.Request.Header.Get("gcmToken")
 
-	url := ""
+	var url string
 	if mapName == "CEDAR" {
 		url = CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
 			latitude, longitude, CedarMapAccessToken)
-	} else if mapName=="MAPIR" {
+	} else if mapName == "MAPIR" {
 		url = MapIrUrl + fmt.Sprintf("fast-reverse?lat=%v&lon=%v", latitude, longitude)
 	}
-
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("accept", "application/json")
-
-	if  mapName=="MAPIR" {
+	if mapName == "MAPIR" {
 		req.Header.Add("x-api-key", MapIrApiKey)
 	}
-
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
 
+	// set log to redis if third party service is down.
 	if res.StatusCode >= 500 {
 
 		errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
-		res.Status, clientId, gcmToken}
+			res.Status, clientId, gcmToken}
 
 		b, _ := json.Marshal(errorObject)
 
@@ -98,25 +99,20 @@ func reverse(c *gin.Context) {
 				mainAddress += address
 			}
 		}
-
 		result := mainAddress
-
 		r := Message{}
 		r.body = []byte(result)
 		r.status = res.StatusCode
-
 		c.JSON(r.status, gin.H{
 			"result": string(r.body),
 		})
 	} else if mapName == "MAPIR" {
 		reverseResponse := new(MapIrReverseResponse)
 		json.NewDecoder(res.Body).Decode(&reverseResponse)
-
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		r := Message{}
 		r.body = []byte(reverseResponse.AddressCompact)
 		r.status = res.StatusCode
-
 		c.JSON(r.status, gin.H{
 			"result": string(r.body),
 		})
@@ -146,23 +142,17 @@ func search(c *gin.Context) {
 		defer res.Body.Close()
 
 		if res.StatusCode >= 500 {
-
 			errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
 				res.Status, clientId, gcmToken}
-
 			b, _ := json.Marshal(errorObject)
-
 			u, _ := uuid.NewV4()
-
 			err := Redis.Set(u.String(), b)
 			if err != nil {
 				panic(err)
 			}
 		}
-
 		cedarSearchResponse := new(CedarMapSearchResponse)
 		json.NewDecoder(res.Body).Decode(&cedarSearchResponse)
-
 		georgeSearchResponse := GeorgeSearchResponse{}
 		resultString := make([]string, 0)
 		for _, value := range cedarSearchResponse.Results {
@@ -197,7 +187,7 @@ func search(c *gin.Context) {
 		georgeSearchResponse.Result = resultString
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.JSON(res.StatusCode, georgeSearchResponse)
-	} else if mapName=="MAPIR" {
+	} else if mapName == "MAPIR" {
 		r := Message{}
 		r.body = []byte("Not implemented")
 		r.status = 501
