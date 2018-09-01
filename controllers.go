@@ -1,31 +1,43 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"fmt"
-	"net/http"
 	"encoding/json"
+	"fmt"
 	"geo/Redis"
-	"time"
+	"github.com/gin-gonic/gin"
 	"github.com/satori/go.uuid"
+	"net/http"
+	"os"
+	"time"
 )
 
+var mapName = os.Getenv("MAP_NAME")
+
 func reverse(c *gin.Context) {
-	//var reverseRequest ReverseRequest
+
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
 	clientId := c.Request.Header.Get("clientId")
 	gcmToken := c.Request.Header.Get("gcmToken")
 
-	url := CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
-		latitude, longitude, CedarMapAccessToken)
+	url := ""
+	if mapName == "CEDAR" {
+		url = CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
+			latitude, longitude, CedarMapAccessToken)
+	} else if mapName=="MAPIR" {
+		url = MapIrUrl + fmt.Sprintf("fast-reverse?lat=%v&lon=%v", latitude, longitude)
+	}
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("accept", "application/json")
 
+	if  mapName=="MAPIR" {
+		req.Header.Add("x-api-key", MapIrApiKey)
+	}
+
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
-	//res.StatusCode = 500
+
 	if res.StatusCode >= 500 {
 
 		errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
@@ -41,128 +53,157 @@ func reverse(c *gin.Context) {
 		}
 	}
 
-	reverseResponse := new(CedarMapReverseResponse)
-	json.NewDecoder(res.Body).Decode(&reverseResponse)
-	c.Header("Content-Type", "application/json; charset=utf-8")
+	if mapName == "CEDAR" {
+		reverseResponse := new(CedarMapReverseResponse)
+		json.NewDecoder(res.Body).Decode(&reverseResponse)
+		c.Header("Content-Type", "application/json; charset=utf-8")
 
-	var mainAddress string
-	if district := reverseResponse.Result.District; district != "" {
-
-		// city part
-		if city := reverseResponse.Result.City; city != "" {
-			mainAddress += city
-		}
-
-		// district part
+		var mainAddress string
 		if district := reverseResponse.Result.District; district != "" {
-			if len(mainAddress) > 0 && mainAddress != "" {
-				mainAddress += ", "
+
+			// city part
+			if city := reverseResponse.Result.City; city != "" {
+				mainAddress += city
 			}
-			mainAddress += district
+
+			// district part
+			if district := reverseResponse.Result.District; district != "" {
+				if len(mainAddress) > 0 && mainAddress != "" {
+					mainAddress += ", "
+				}
+				mainAddress += district
+			}
+
+			// place part
+			if place := reverseResponse.Result.Place; place != "" {
+				if len(mainAddress) > 0 && mainAddress != "" {
+					mainAddress += ", "
+				}
+				mainAddress += place
+			}
+
+			// locality part
+			if localityName := reverseResponse.Result.Locality; localityName != "" {
+				if len(mainAddress) > 0 && mainAddress != "" {
+					mainAddress += ", "
+				}
+				mainAddress += localityName
+			}
+
+			// address part
+			if address := reverseResponse.Result.Address; address != "" {
+				if len(mainAddress) > 0 && mainAddress != "" {
+					mainAddress += ", "
+				}
+				mainAddress += address
+			}
 		}
 
-		// place part
-		if place := reverseResponse.Result.Place; place != "" {
-			if len(mainAddress) > 0 && mainAddress != "" {
-				mainAddress += ", "
-			}
-			mainAddress += place
-		}
+		result := mainAddress
 
-		// locality part
-		if localityName := reverseResponse.Result.Locality; localityName != "" {
-			if len(mainAddress) > 0 && mainAddress != "" {
-				mainAddress += ", "
-			}
-			mainAddress += localityName
-		}
+		r := Message{}
+		r.body = []byte(result)
+		r.status = res.StatusCode
 
-		// address part
-		if address := reverseResponse.Result.Address; address != "" {
-			if len(mainAddress) > 0 && mainAddress != "" {
-				mainAddress += ", "
-			}
-			mainAddress += address
-		}
+		c.JSON(r.status, gin.H{
+			"result": string(r.body),
+		})
+	} else if mapName == "MAPIR" {
+		reverseResponse := new(MapIrReverseResponse)
+		json.NewDecoder(res.Body).Decode(&reverseResponse)
+
+		c.Header("Content-Type", "application/json; charset=utf-8")
+		r := Message{}
+		r.body = []byte(reverseResponse.AddressCompact)
+		r.status = res.StatusCode
+
+		c.JSON(r.status, gin.H{
+			"result": string(r.body),
+		})
 	}
-
-	result := mainAddress
-
-	r := Message{}
-	r.body = []byte(result)
-	r.status = res.StatusCode
-
-	c.JSON(200, gin.H{
-		"result": string(r.body),
-	})
 }
 
 func search(c *gin.Context) {
+	if mapName == "" {
+		mapName = "CEDAR"
+	}
 	name := c.Query("name")
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
 	distance := c.Query("distance")
+	clientId := c.Request.Header.Get("clientId")
+	gcmToken := c.Request.Header.Get("gcmToken")
 
-	url := CedarMapUrl + fmt.
-		Sprintf("v1/geocode/cedarmaps.streets/%v.json?access_token=%v&location=%v,%v&distance=%v",
-			name, CedarMapAccessToken, latitude, longitude, distance)
+	if mapName == "CEDAR" {
+		url := CedarMapUrl + fmt.
+			Sprintf("v1/geocode/cedarmaps.streets/%v.json?access_token=%v&location=%v,%v&distance=%v",
+				name, CedarMapAccessToken, latitude, longitude, distance)
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("accept", "application/json")
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Add("accept", "application/json")
 
-	res, _ := http.DefaultClient.Do(req)
-	defer res.Body.Close()
+		res, _ := http.DefaultClient.Do(req)
+		defer res.Body.Close()
 
-	if res.StatusCode >= 500 {
-		//
-		// run down time job
-	}
+		if res.StatusCode >= 500 {
 
-	cedarSearchResponse := new(CedarMapSearchResponse)
-	json.NewDecoder(res.Body).Decode(&cedarSearchResponse)
+			errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
+				res.Status, clientId, gcmToken}
 
-	georgeSearchResponse := GeorgeSearchResponse{}
-	resultString := make([]string, 0)
-	for _, value := range cedarSearchResponse.Results {
-		if value.Address != "" {
-			volunteerValue := ""
-			// city part
-			if city := value.Components.City; city != "" {
-				volunteerValue += city
+			b, _ := json.Marshal(errorObject)
+
+			u, _ := uuid.NewV4()
+
+			err := Redis.Set(u.String(), b)
+			if err != nil {
+				panic(err)
 			}
-
-			// district part
-			if len(value.Components.Districts) > 0 {
-				if district := value.Components.Districts[0]; district != "" {
-					if len(volunteerValue) > 0 && volunteerValue != "" {
-						volunteerValue += ", "
-					}
-					volunteerValue += district
-				}
-			}
-
-			//locality part
-			//if len(value.Components.Localities) > 0 {
-			//	if localityName := value.Components.Localities[0]; localityName != "" {
-			//		if len(volunteerValue) > 0 && volunteerValue != "" {
-			//			volunteerValue += ", "
-			//		}
-			//		volunteerValue += localityName
-			//	}
-			//}
-
-			// address part
-			if len(volunteerValue) > 0 && volunteerValue != "" {
-				volunteerValue += ", "
-			}
-			volunteerValue += value.Address
-
-			resultString = append(resultString, volunteerValue)
-		} else {
-			continue
 		}
+
+		cedarSearchResponse := new(CedarMapSearchResponse)
+		json.NewDecoder(res.Body).Decode(&cedarSearchResponse)
+
+		georgeSearchResponse := GeorgeSearchResponse{}
+		resultString := make([]string, 0)
+		for _, value := range cedarSearchResponse.Results {
+			if value.Address != "" {
+				volunteerValue := ""
+				// city part
+				if city := value.Components.City; city != "" {
+					volunteerValue += city
+				}
+
+				// district part
+				if len(value.Components.Districts) > 0 {
+					if district := value.Components.Districts[0]; district != "" {
+						if len(volunteerValue) > 0 && volunteerValue != "" {
+							volunteerValue += ", "
+						}
+						volunteerValue += district
+					}
+				}
+
+				// address part
+				if len(volunteerValue) > 0 && volunteerValue != "" {
+					volunteerValue += ", "
+				}
+				volunteerValue += value.Address
+
+				resultString = append(resultString, volunteerValue)
+			} else {
+				continue
+			}
+		}
+		georgeSearchResponse.Result = resultString
+		c.Header("Content-Type", "application/json; charset=utf-8")
+		c.JSON(res.StatusCode, georgeSearchResponse)
+	} else if mapName=="MAPIR" {
+		r := Message{}
+		r.body = []byte("Not implemented")
+		r.status = 501
+
+		c.JSON(r.status, gin.H{
+			"result": string(r.body),
+		})
 	}
-	georgeSearchResponse.Result = resultString
-	c.Header("Content-Type", "application/json; charset=utf-8")
-	c.JSON(res.StatusCode, georgeSearchResponse)
 }

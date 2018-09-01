@@ -1,14 +1,13 @@
 package main
 
 import (
+	"geo/Redis"
 	"github.com/gin-gonic/gin"
 	"os"
 	//"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cache"
-
-	"time"
-	"geo/Redis"
 	"github.com/gin-contrib/cache/persistence"
+	"time"
 )
 
 //var (
@@ -37,15 +36,12 @@ func main() {
 	r.Use(RequestIdMiddleware())
 	r.Use(TokenAuthMiddleware())
 
-	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	r.Use(gin.Recovery())
 
 	authorized := r.Group("/")
-	authorized.Use(TokenAuthMiddleware())
 	{
-		//authorized.GET("/reverse", reverse)
-		authorized.GET("/search", cache.CachePage(store, time.Minute, search))
 		authorized.GET("/reverse", cache.CachePage(store, time.Minute, reverse))
+		authorized.GET("/search", cache.CachePage(store, time.Minute, search))
 	}
 	r.Run(serverUrl + port)
 }

@@ -7,13 +7,13 @@ type ReverseRequest struct {
 
 type Geom struct {
 	Type        string    `json:"type"`
-	Coordinates []float64 `json:"-"`
+	Coordinates []string `json:"coordinates"`
 }
 
 type MapIrReverseResponse struct {
 	Address       string `json:"address"`
 	PostalAddress string `json:"postal_address"`
-	PostalCompact string `json:"postal_compact"`
+	AddressCompact string `json:"address_compact"`
 	Country       string `json:"country"`
 	Province      string `json:"province"`
 	County        string `json:"county"`
@@ -25,7 +25,7 @@ type MapIrReverseResponse struct {
 	Poi           string `json:"poi"`
 	Plaque        string `json:"plaque"`
 	PostalCode    string `json:"postal_code"`
-	Geom          Geom   `json:"geom"`
+	Geom          Geom   `json:"-"`
 }
 
 type Component struct {
@@ -102,6 +102,27 @@ type CedarSearchResult struct {
 type CedarMapSearchResponse struct {
 	Status  string              `json:"status"`
 	Results []CedarSearchResult `json:"results"`
+}
+
+type MapIrCoordinate struct {
+	Lat string `json:"lat"`
+	Lon string `json:"lon"`
+}
+
+type MapIrValue struct {
+	Text string `json:"text"`
+	Title string `json:"title"`
+	Address string `json:"address"`
+	Province string `json:"province"`
+	City string `json:"city"`
+	Type string `json:"type"`
+	FClass string `json:"FClass"`
+	Coordinate MapIrCoordinate `json:"-"`
+}
+
+type MapIrSearchResponse struct {
+	OdataCount int `json:"odata.count"`
+	Value []MapIrValue `json:"value"`
 }
 
 type GeorgeSearchResponse struct {
