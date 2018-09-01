@@ -111,7 +111,7 @@ type MapIrValue struct {
 }
 
 type GeorgeSearchResponse struct {
-	Result []string `json:"result"`
+	Result []SearchResponse `json:"result"`
 }
 
 type ErrorLogger struct {

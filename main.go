@@ -2,15 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"geo/Redis"
 	"github.com/cnjack/throttle"
 	"github.com/gin-gonic/gin"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
-
-	//"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
 	"time"
@@ -35,20 +32,29 @@ type MessageError struct {
 
 func main() {
 
-	redisPool := Redis.Init()
+	redisPool := Init()
 	store := persistence.NewRedisCacheWithPool(redisPool, time.Minute)
 
 	serverUrl := os.Getenv("SERVER")
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3001"
+	}
 	Limit := os.Getenv("LIMIT")
+
 	ThrottlingLimit, err := strconv.ParseUint(Limit, 10, 64)
 	if err != nil {
 		ThrottlingLimit = 100
 	}
 
 	r := gin.Default()
-	//TODO (GIN_MODE=release)
-	gin.SetMode(gin.DebugMode)
+
+	releaseMode := os.Getenv("GIN_MODE")
+	if releaseMode == "DEBUG" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 	r.Use(gin.Logger())
 	r.Use(TokenAuthMiddleware())
 
@@ -63,7 +69,7 @@ func main() {
 
 	outError, _ := json.Marshal(errorResp)
 	authorized.Use(throttle.Policy(&throttle.Quota{
-		Limit:ThrottlingLimit,
+		Limit: ThrottlingLimit,
 		Within: time.Minute,
 	}, &throttle.Options{
 		StatusCode: 429,
@@ -86,5 +92,5 @@ func main() {
 		authorized.GET("/reverse", cache.CachePage(store, 10 * time.Second, reverse))
 		authorized.GET("/search", cache.CachePage(store, 10 * time.Second, search))
 	}
-	r.Run(serverUrl + port)
+	r.Run(serverUrl + ":" + port)
 }

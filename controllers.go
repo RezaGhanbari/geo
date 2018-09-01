@@ -3,12 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"geo/Redis"
 	"github.com/gin-gonic/gin"
 	"github.com/satori/go.uuid"
 	"net/http"
 	"os"
 	"time"
+	"strings"
 )
 
 var mapName = os.Getenv("MAP_NAME")
@@ -20,10 +20,9 @@ func reverse(c *gin.Context) {
 
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
-	clientId := c.Request.Header.Get("clientId")
-	gcmToken := c.Request.Header.Get("gcmToken")
+	ClientId := c.Request.Header.Get("x-client-id")
 
-	if clientId == "" || gcmToken == ""{
+	if ClientId == "" {
 		respondWithError(400, "Credentials are not provided.", c)
 		return
 	}
@@ -45,15 +44,16 @@ func reverse(c *gin.Context) {
 
 	// set log to redis if third party service is down.
 	if res.StatusCode >= 500 {
-
+		s := strings.Split(ClientId, ":")
+		cId, gcmToken := s[0], s[1]
 		errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
-			res.Status, clientId, gcmToken}
+			res.Status, cId, gcmToken}
 
 		b, _ := json.Marshal(errorObject)
 
 		u, _ := uuid.NewV4()
 
-		err := Redis.Set(u.String(), b)
+		err := Set("ERROR_" + u.String(), b)
 		if err != nil {
 			panic(err)
 		}
@@ -124,6 +124,10 @@ func reverse(c *gin.Context) {
 	}
 }
 
+type SearchResponse struct {
+	Address string `json:"address"`
+}
+
 func search(c *gin.Context) {
 	if mapName == "" {
 		mapName = "CEDAR"
@@ -132,10 +136,8 @@ func search(c *gin.Context) {
 	latitude := c.Query("lat")
 	longitude := c.Query("lon")
 	distance := c.Query("distance")
-	clientId := c.Request.Header.Get("clientId")
-	gcmToken := c.Request.Header.Get("gcmToken")
-
-	if clientId == "" || gcmToken == ""{
+	clientId := c.Request.Header.Get("x-client-id")
+	if clientId == "" {
 		respondWithError(400, "Credentials are not provided.", c)
 		return
 	}
@@ -152,11 +154,13 @@ func search(c *gin.Context) {
 		defer res.Body.Close()
 
 		if res.StatusCode >= 500 {
+			s := strings.Split(clientId, ":")
+			cId, gcmToken := s[0], s[1]
 			errorObject := ErrorLogger{time.Now().String(), c.Request.URL.Path,
-				res.Status, clientId, gcmToken}
+				res.Status, cId, gcmToken}
 			b, _ := json.Marshal(errorObject)
 			u, _ := uuid.NewV4()
-			err := Redis.Set(u.String(), b)
+			err := Set("ERROR_" + u.String(), b)
 			if err != nil {
 				panic(err)
 			}
@@ -164,8 +168,11 @@ func search(c *gin.Context) {
 		cedarSearchResponse := new(CedarMapSearchResponse)
 		json.NewDecoder(res.Body).Decode(&cedarSearchResponse)
 		georgeSearchResponse := GeorgeSearchResponse{}
-		resultString := make([]string, 0)
+
+		resultString := make([]SearchResponse, 0)
+
 		for _, value := range cedarSearchResponse.Results {
+			searchResponse := SearchResponse{}
 			if value.Address != "" {
 				volunteerValue := ""
 				// city part
@@ -188,8 +195,9 @@ func search(c *gin.Context) {
 					volunteerValue += ", "
 				}
 				volunteerValue += value.Address
+				searchResponse.Address = volunteerValue
 
-				resultString = append(resultString, volunteerValue)
+				resultString = append(resultString, searchResponse)
 			} else {
 				continue
 			}

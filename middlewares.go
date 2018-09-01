@@ -15,7 +15,7 @@ func respondWithError(code int, message string, c *gin.Context) {
 func TokenAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// read from header
-		token := c.Request.Header.Get("api_token")
+		token := c.Request.Header.Get("api-token")
 
 		if token == "" {
 			respondWithError(401, "API token required", c)
