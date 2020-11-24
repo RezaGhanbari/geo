@@ -15,7 +15,7 @@ var mapName = os.Getenv("MAP_NAME")
 
 func reverse(c *gin.Context) {
 	if mapName == "" {
-		mapName = "CEDAR"
+		mapName = "X"
 	}
 
 	latitude := c.Query("lat")
@@ -23,12 +23,12 @@ func reverse(c *gin.Context) {
 	ClientId := c.Request.Header.Get("x-client-id")
 
 	if ClientId == "" {
-		respondWithError(400, "Credentials are not provided.", c)
+		respondWithError(400, "credentials are not provided.", c)
 		return
 	}
 
 	var url string
-	if mapName == "CEDAR" {
+	if mapName == "X" {
 		url = CedarMapUrl + fmt.Sprintf("...",
 			latitude, longitude, CedarMapAccessToken)
 	} else if mapName == "X" {
@@ -59,7 +59,7 @@ func reverse(c *gin.Context) {
 		}
 	}
 
-	if mapName == "CEDAR" {
+	if mapName == "X" {
 		reverseResponse := new(CedarMapReverseResponse)
 		json.NewDecoder(res.Body).Decode(&reverseResponse)
 		c.Header("Content-Type", "application/json; charset=utf-8")
@@ -111,7 +111,7 @@ func reverse(c *gin.Context) {
 		c.JSON(r.Status, gin.H{
 			"result": string(r.Body),
 		})
-	} else if mapName == "MAPIR" {
+	} else if mapName == "Y" {
 		reverseResponse := new(MapIrReverseResponse)
 		json.NewDecoder(res.Body).Decode(&reverseResponse)
 		c.Header("Content-Type", "application/json; charset=utf-8")
@@ -142,7 +142,7 @@ func search(c *gin.Context) {
 		return
 	}
 
-	if mapName == "CEDAR" {
+	if mapName == "X" {
 		url := CedarMapUrl + fmt.
 			Sprintf("...",
 				name, CedarMapAccessToken, latitude, longitude, distance)
