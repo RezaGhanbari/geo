@@ -5,7 +5,7 @@ type Geom struct {
 	Coordinates []string `json:"coordinates"`
 }
 
-type MapIrReverseResponse struct {
+type YReverseResponse struct {
 	Address        string `json:"address"`
 	PostalAddress  string `json:"postal_address"`
 	AddressCompact string `json:"address_compact"`
@@ -46,7 +46,7 @@ type Result struct {
 	TrafficZone TrafficZone `json:"-"`
 }
 
-type CedarMapReverseResponse struct {
+type XMapReverseResponse struct {
 	Status string `json:"status"`
 	Result Result `json:"result"`
 }
@@ -66,12 +66,12 @@ type BB struct {
 	SW string `json:"sw"`
 }
 
-type CedarSearchLocation struct {
+type XSearchLocation struct {
 	BB     BB     `json:"bb"`
 	Center string `json:"center"`
 }
 
-type CedarSearchComponent struct {
+type XSearchComponent struct {
 	Country    string   `json:"country"`
 	Province   string   `json:"province"`
 	City       string   `json:"city"`
@@ -79,7 +79,7 @@ type CedarSearchComponent struct {
 	Localities []string `json:"localities"`
 }
 
-type CedarSearchResult struct {
+type XSearchResult struct {
 	Id         int                  `json:"id"`
 	Name       string               `json:"name"`
 	NameEn     string               `json:"name_en"`
@@ -94,12 +94,12 @@ type CedarMapSearchResponse struct {
 	Results []CedarSearchResult `json:"results"`
 }
 
-type MapIrCoordinate struct {
+type YCoordinate struct {
 	Lat string `json:"lat"`
 	Lon string `json:"lon"`
 }
 
-type MapIrValue struct {
+type YValue struct {
 	Text       string          `json:"text"`
 	Title      string          `json:"title"`
 	Address    string          `json:"address"`
@@ -107,7 +107,7 @@ type MapIrValue struct {
 	City       string          `json:"city"`
 	Type       string          `json:"type"`
 	FClass     string          `json:"FClass"`
-	Coordinate MapIrCoordinate `json:"-"`
+	Coordinate YCoordinate `json:"-"`
 }
 
 type GeorgeSearchResponse struct {
