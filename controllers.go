@@ -29,14 +29,14 @@ func reverse(c *gin.Context) {
 
 	var url string
 	if mapName == "CEDAR" {
-		url = CedarMapUrl + fmt.Sprintf("v1/geocode/cedarmaps.streets/%v,%v?access_token=%v",
+		url = CedarMapUrl + fmt.Sprintf("...",
 			latitude, longitude, CedarMapAccessToken)
-	} else if mapName == "MAPIR" {
-		url = MapIrUrl + fmt.Sprintf("fast-reverse?lat=%v&lon=%v", latitude, longitude)
+	} else if mapName == "X" {
+		url = MapIrUrl + fmt.Sprintf("...", latitude, longitude)
 	}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("accept", "application/json")
-	if mapName == "MAPIR" {
+	if mapName == "X" {
 		req.Header.Add("x-api-key", MapIrApiKey)
 	}
 	res, _ := http.DefaultClient.Do(req)
@@ -130,7 +130,7 @@ type SearchResponse struct {
 
 func search(c *gin.Context) {
 	if mapName == "" {
-		mapName = "CEDAR"
+		mapName = "Y"
 	}
 	name := c.Query("name")
 	latitude := c.Query("lat")
@@ -144,7 +144,7 @@ func search(c *gin.Context) {
 
 	if mapName == "CEDAR" {
 		url := CedarMapUrl + fmt.
-			Sprintf("v1/geocode/cedarmaps.streets/%v.json?access_token=%v&location=%v,%v&distance=%v",
+			Sprintf("...",
 				name, CedarMapAccessToken, latitude, longitude, distance)
 
 		req, _ := http.NewRequest("GET", url, nil)
@@ -205,7 +205,7 @@ func search(c *gin.Context) {
 		georgeSearchResponse.Result = resultString
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.JSON(res.StatusCode, georgeSearchResponse)
-	} else if mapName == "MAPIR" {
+	} else if mapName == "X" {
 		r := Message{}
 		r.Body = []byte("Not implemented")
 		r.Status = 501
